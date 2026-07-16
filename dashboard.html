@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>澳维液体膜 · 经营仪表盘</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#f0f2f5;--card:#fff;--pri:#1d4ed8;--suc:#0d9488;--warn:#f59e0b;--danger:#ef4444;--text:#1e293b;--tx2:#64748b;--bd:#e2e8f0;--sw:210px;--hh:108px;--sh:0 1px 3px rgba(0,0,0,.08);--sh-lg:0 4px 16px rgba(0,0,0,.1);--r:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+#header{height:var(--hh);background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;display:flex;align-items:center;padding:0 18px;gap:10px;z-index:100;position:relative}
+#header .logo{font-size:17px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:7px}
+#header .logo .icon{width:32px;height:32px;background:linear-gradient(135deg,#38bdf8,#6366f1);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+#header .logo span.t{color:#38bdf8}
+#header .date-group{display:flex;gap:6px;align-items:center;margin-left:14px}
+#header .date-group select{padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:12px;cursor:pointer;outline:none}
+#header .date-group select option{color:#1e293b;background:#fff}
+#header .q-btn{padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap}
+#header .q-btn:hover{background:rgba(255,255,255,.18)}
+#header .q-btn.sel{background:var(--pri);border-color:var(--pri);font-weight:600}
+.kpi-row{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.kpi-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:8px 12px;min-width:105px;text-align:center;transition:.2s;cursor:default}
+.kpi-card:hover{background:rgba(255,255,255,.13)}
+.kpi-card .kpi-val{font-size:18px;font-weight:700}
+.kpi-card .kpi-label{font-size:10px;color:rgba(255,255,255,.55);margin-top:1px}
+.kpi-card.up .kpi-val{color:#4ade80}
+.kpi-card.down .kpi-val{color:#f87171}
+
+#sidebar{position:fixed;left:0;top:var(--hh);bottom:0;width:var(--sw);background:var(--card);border-right:1px solid var(--bd);overflow-y:auto;z-index:90;padding:6px 0;box-shadow:var(--sh)}
+.sec-label{padding:8px 14px 3px;font-size:13px;color:var(--text);font-weight:700;letter-spacing:.5px}
+.side-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;border:none;background:transparent;cursor:pointer;font-size:12px;color:var(--text);transition:.15s;text-align:left;border-left:3px solid transparent}
+.side-btn:hover{background:#f1f5f9}
+.side-btn.active{background:#eff6ff;color:var(--pri);border-left-color:var(--pri);font-weight:600}
+.side-btn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.side-btn .tip{font-size:9px;color:var(--tx2);margin-left:auto}
+.mode-switch{padding:9px 14px;margin:6px 10px;border-radius:6px;background:#f8fafc;font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:6px;cursor:pointer;border:1px solid var(--bd);transition:.15s}
+.mode-switch:hover{background:#f1f5f9}
+.mode-switch input{cursor:pointer}
+
+#main{position:fixed;left:var(--sw);top:var(--hh);right:0;bottom:0;overflow-y:auto;padding:8px}
+#main.single{display:flex;flex-direction:column}
+#main.multi{display:grid;grid-template-columns:repeat(auto-fill,minmax(500px,1fr));gap:8px;align-content:start}
+#main.multi.n2{grid-template-columns:repeat(2,1fr)}
+
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;min-height:550px;animation:fadeIn .25s ease}
+.panel:hover{box-shadow:var(--sh-lg)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--bd);background:#fafbfc;flex-shrink:0}
+.panel-hd h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:5px}
+.panel-ctls button{border:none;background:transparent;cursor:pointer;font-size:16px;padding:1px 6px;border-radius:4px;color:var(--tx2);transition:.15s}
+.panel-ctls button:hover{background:#e2e8f0;color:var(--text)}
+
+.panel-body{flex:1;position:relative;min-height:480px;overflow:hidden}
+.panel-body>.chart-wrap{position:absolute;top:0;left:0;right:0;bottom:0}
+
+.col2-layout{display:flex;gap:10px;padding:10px;position:relative;min-height:500px}
+.col2-layout>.chart-wrap{flex:1;position:relative;min-width:0;min-height:100%}
+.col2-layout>.emp-sidebar{width:300px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--bd);display:flex;flex-direction:column}
+.col2-layout>.emp-main{flex:1;position:relative;min-height:480px}
+.col2-layout>.emp-main>.chart-wrap{position:absolute;top:0;left:0;right:0;bottom:0}
+
+.dept-tabs{display:flex;gap:4px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid var(--bd);flex-shrink:0}
+.dept-tab{padding:4px 12px;border-radius:14px;border:1px solid var(--bd);background:#fff;cursor:pointer;font-size:11px;transition:.15s;color:var(--tx2);white-space:nowrap}
+.dept-tab:hover{background:#f1f5f9;color:var(--text)}
+.dept-tab.sel{background:var(--pri);color:#fff;border-color:var(--pri)}
+
+/* Modal overlay */
+#modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center}
+#modal-overlay.show{display:flex}
+#modal-box{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:500px;width:90%;max-height:70vh;overflow-y:auto;animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#modal-box .modal-hd{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+#modal-box .modal-hd h4{font-size:15px;font-weight:600}
+#modal-box .modal-hd button{border:none;background:transparent;cursor:pointer;font-size:18px;color:var(--tx2);padding:2px 8px;border-radius:4px}
+#modal-box .modal-hd button:hover{background:#f1f5f9}
+#modal-box .modal-body{padding:14px 18px}
+#modal-box .modal-body table{width:100%;border-collapse:collapse;font-size:12px}
+#modal-box .modal-body th{text-align:left;padding:8px 6px;border-bottom:2px solid var(--bd);color:var(--tx2);font-weight:600}
+#modal-box .modal-body td{padding:8px 6px;border-bottom:1px solid #f1f5f9}
+#modal-box .cred-bar{height:8px;border-radius:4px;min-width:40px}
+#modal-box .tag{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+#modal-box .tag.parent{background:#fef2f2;color:#dc2626}
+#modal-box .tag.child{background:#fefce8;color:#ca8a04}
+#modal-box .tag.sibling{background:#f0fdf4;color:#16a34a}
+#modal-box .tag.independent{background:#f1f5f9;color:#64748b}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:8px 20px;border-radius:18px;font-size:12px;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s}
+#toast.show{opacity:1}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px}
+
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:5px;padding:4px}
+.emp-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px;border-radius:8px;transition:.15s}
+.emp-item:hover{background:#f1f5f9}
+.emp-item.sel{background:#eff6ff;box-shadow:0 0 0 2px var(--pri)}
+.emp-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff}
+.emp-item.sel .emp-avatar{transform:scale(1.1)}
+.emp-info .name{font-size:10px;color:var(--text);text-align:center}.emp-info .dept{font-size:8px;color:var(--tx2);text-align:center}
+
+@media(max-width:1200px){#main.multi{grid-template-columns:1fr}}
+@media(max-width:768px){#sidebar{width:54px}.side-btn span:not(.dot){display:none}.side-btn .tip{display:none}.sec-label{display:none}#main{left:54px}}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo"><div class="icon">💧</div>澳维液体膜 · 经营仪表盘</div>
+  <div class="date-group">
+    <select id="selYear"><option>2024</option><option>2025</option><option selected>2026</option></select>
+    <span style="color:rgba(255,255,255,.5);font-size:12px">年</span>
+    <select id="selMonth"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option selected value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select>
+    <span style="color:rgba(255,255,255,.5);font-size:12px">月</span>
+    <span class="q-btn sel" data-q="0">全年</span>
+    <span class="q-btn" data-q="1">Q1</span>
+    <span class="q-btn" data-q="2">Q2</span>
+    <span class="q-btn" data-q="3">Q3</span>
+    <span class="q-btn" data-q="4">Q4</span>
+  </div>
+  <div class="kpi-row" id="kpiRow"></div>
+</div>
+
+<div id="sidebar">
+  <div class="sec-label">📊 战略层</div>
+  <button class="side-btn active" data-page="china"><span class="dot" style="background:#f59e0b"></span>中国市场地图<span class="tip">地图</span></button>
+  <button class="side-btn" data-page="world"><span class="dot" style="background:#3b82f6"></span>全球市场地图<span class="tip">地图</span></button>
+  <button class="side-btn" data-page="sales"><span class="dot" style="background:#10b981"></span>销售额分析<span class="tip">柱状+瀑布</span></button>
+  <div class="sec-label">👥 员工层</div>
+  <button class="side-btn" data-page="employee"><span class="dot" style="background:#ec4899"></span>员工业绩排名<span class="tip">棒棒糖</span></button>
+  <button class="side-btn" data-page="emp-profile"><span class="dot" style="background:#8b5cf6"></span>员工档案<span class="tip">雷达</span></button>
+  <div class="sec-label">🏢 客户层</div>
+  <button class="side-btn" data-page="purchase"><span class="dot" style="background:#14b8a6"></span>客户购买量<span class="tip">直方图</span></button>
+  <button class="side-btn" data-page="pareto"><span class="dot" style="background:#f97316"></span>帕累托分析<span class="tip">80/20</span></button>
+  <button class="side-btn" data-page="heatmap"><span class="dot" style="background:#06b6d4"></span>优质客户检索<span class="tip">热力图</span></button>
+  <div class="sec-label">🛡️ 公信力</div>
+  <button class="side-btn" data-page="credibility"><span class="dot" style="background:#22c55e"></span>公信力相关图<span class="tip">升降</span></button>
+  <button class="side-btn" data-page="network"><span class="dot" style="background:#a855f7"></span>客户关系网<span class="tip">网络</span></button>
+  <label class="mode-switch" title="开启后可同时打开多个页面进行对比">
+    <input type="checkbox" id="multiMode"> 多面板对比
+  </label>
+</div>
+
+<div id="main"></div>
+<div id="toast"></div>
+<div id="modal-overlay"><div id="modal-box"></div></div>
+
+<script>
+// ==================== MOCK DATA ====================
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const CITIES=['北京','上海','广州','深圳','杭州','南京','武汉','成都','重庆','西安','长沙','郑州','济南','青岛','天津','苏州','东莞','佛山','合肥','福州','株洲','湘潭','衡阳','岳阳','常德','温州','宁波','厦门','南昌','昆明','石家庄','哈尔滨'];
+
+const EMPLOYEES=[
+  {id:1,name:'张伟',dept:'销售一部',color:'#4f46e5',attendance:.96,sales:426,growth:12.5,calls:180,contracts:28,customerScore:92,teamwork:88},
+  {id:2,name:'李娜',dept:'销售一部',color:'#ec4899',attendance:.99,sales:389,growth:8.3,calls:210,contracts:32,customerScore:95,teamwork:90},
+  {id:3,name:'孙磊',dept:'销售一部',color:'#ef4444',attendance:.87,sales:245,growth:-8.1,calls:120,contracts:15,customerScore:72,teamwork:70},
+  {id:4,name:'赵敏',dept:'销售二部',color:'#10b981',attendance:.98,sales:355,growth:5.7,calls:168,contracts:25,customerScore:88,teamwork:85},
+  {id:5,name:'王强',dept:'销售二部',color:'#f59e0b',attendance:.91,sales:298,growth:-3.2,calls:145,contracts:19,customerScore:78,teamwork:75},
+  {id:6,name:'周雪',dept:'销售二部',color:'#8b5cf6',attendance:.97,sales:312,growth:4.2,calls:155,contracts:22,customerScore:86,teamwork:88},
+  {id:7,name:'黄婷',dept:'销售三部',color:'#d946ef',attendance:.96,sales:278,growth:2.8,calls:138,contracts:18,customerScore:84,teamwork:82},
+  {id:8,name:'林杰',dept:'销售三部',color:'#0ea5e9',attendance:.94,sales:265,growth:1.5,calls:132,contracts:17,customerScore:81,teamwork:80},
+  {id:9,name:'徐凯',dept:'销售四部',color:'#84cc16',attendance:.92,sales:330,growth:6.5,calls:160,contracts:24,customerScore:89,teamwork:86},
+  {id:10,name:'何美',dept:'销售四部',color:'#f43f5e',attendance:.98,sales:290,growth:3.1,calls:142,contracts:20,customerScore:85,teamwork:84},
+  {id:11,name:'高峰',dept:'销售一部',color:'#6366f1',attendance:.90,sales:410,growth:10.2,calls:195,contracts:30,customerScore:91,teamwork:87},
+  {id:12,name:'沈洁',dept:'销售三部',color:'#14b8a6',attendance:.95,sales:258,growth:-1.8,calls:128,contracts:16,customerScore:79,teamwork:78},
+  {id:13,name:'陈刚',dept:'生产部',color:'#f97316',attendance:1.0,sales:0,growth:0,calls:0,contracts:0,customerScore:85,teamwork:95},
+  {id:14,name:'罗勇',dept:'生产部',color:'#a855f7',attendance:.98,sales:0,growth:0,calls:0,contracts:0,customerScore:82,teamwork:94},
+  {id:15,name:'谢涛',dept:'生产部',color:'#06b6d4',attendance:.96,sales:0,growth:0,calls:0,contracts:0,customerScore:80,teamwork:92},
+  {id:16,name:'刘芳',dept:'技术部',color:'#eab308',attendance:.95,sales:0,growth:0,calls:0,contracts:0,customerScore:90,teamwork:92},
+  {id:17,name:'吴昊',dept:'技术部',color:'#22d3ee',attendance:.93,sales:0,growth:0,calls:0,contracts:0,customerScore:91,teamwork:88},
+  {id:18,name:'江宇',dept:'研发部',color:'#a3e635',attendance:.97,sales:0,growth:0,calls:0,contracts:0,customerScore:88,teamwork:90},
+  {id:19,name:'唐颖',dept:'研发部',color:'#fb923c',attendance:.94,sales:0,growth:0,calls:0,contracts:0,customerScore:86,teamwork:89},
+  {id:20,name:'郑丽',dept:'财务部',color:'#34d399',attendance:.99,sales:0,growth:0,calls:0,contracts:0,customerScore:82,teamwork:90},
+  {id:21,name:'马超',dept:'市场部',color:'#818cf8',attendance:.94,sales:0,growth:0,calls:0,contracts:0,customerScore:88,teamwork:86},
+  {id:22,name:'彭慧',dept:'财务部',color:'#fbbf24',attendance:.98,sales:0,growth:0,calls:0,contracts:0,customerScore:84,teamwork:91},
+  {id:23,name:'曹磊',dept:'质管部',color:'#c084fc',attendance:.96,sales:0,growth:0,calls:0,contracts:0,customerScore:87,teamwork:85},
+  {id:24,name:'邓芳',dept:'市场部',color:'#38bdf8',attendance:.93,sales:0,growth:0,calls:0,contracts:0,customerScore:85,teamwork:83},
+  {id:25,name:'崔浩',dept:'质管部',color:'#fb7185',attendance:.95,sales:0,growth:0,calls:0,contracts:0,customerScore:83,teamwork:87},
+];
+
+const custPrefix=['华星','鑫达','宏远','鼎新','瑞丰','嘉和','国泰','联创','盛通','博源','天海','明辉','中科','远景','新力','恒通','长信','大华','永利','万方','创智','金鹏','东方','康达','益众','汇丰','锦程','飞腾','广聚','龙腾'];
+const custSuffix=['光电','新材料','薄膜','涂布','电子','包装','显示','新能源','科技','实业','化工','材料'];
+const CUSTOMERS=[];
+for(let i=0;i<45;i++){
+  let name=custPrefix[i%30]+custSuffix[i%12]+(i>=30?'('+Math.ceil(i/30)+')':'');
+  let groupId=Math.random()<.22?Math.floor(Math.random()*7):-1;
+  let m=[];for(let j=0;j<12;j++)m.push(Math.round(5+Math.random()*260));
+  let role='独立';
+  if(groupId>=0){let existing=CUSTOMERS.filter(c=>c.groupId===groupId);if(existing.length===0)role='母公司';else if(existing.some(c=>c.role==='母公司'))role=Math.random()<.4?'子公司':(Math.random()<.5?'兄弟公司':'子公司');else{if(Math.random()<.5)role='母公司';else role='子公司';}}
+  CUSTOMERS.push({name,city:CITIES[i%CITIES.length],monthly:m,annual:m.reduce((a,b)=>a+b,0),avgMonthly:Math.round(m.reduce((a,b)=>a+b,0)/12),payRate:.55+Math.random()*.45,fulfillRate:.65+Math.random()*.35,returnRate:Math.random()*.14,years:1+Math.random()*9,networkValue:Math.random(),credibility:.45+Math.random()*.55,groupId,role});
+}
+
+// ==================== STATE ====================
+let activePanels=new Set(['china']);
+let multiMode=false;
+let isChinaMapLoaded=false;
+let selectedDept='全部';
+let currentQuarter='0';
+let highlightGroupId=-1;
+
+function toast(msg){let t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
+
+// ==================== MODAL ====================
+function showModal(title,content){
+  let box=document.getElementById('modal-box');
+  box.innerHTML=`<div class="modal-hd"><h4>${title}</h4><button onclick="closeModal()">✕</button></div><div class="modal-body">${content}</div>`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
+document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// Show related companies' credibility in modal
+function showGroupCredibility(groupId,sourceName){
+  let members=CUSTOMERS.filter(c=>c.groupId===groupId).sort((a,b)=>b.credibility-a.credibility);
+  if(members.length===0){toast('该公司无关联企业');return;}
+  let roleTag=r=>r==='母公司'?'parent':r==='子公司'?'child':r==='兄弟公司'?'sibling':'independent';
+  let roleLabel=r=>r==='母公司'?'母':r==='子公司'?'子':r==='兄弟公司'?'兄':'独立';
+  let rows=members.map(m=>{
+    let credPct=(m.credibility*100).toFixed(0);
+    let barColor=m.credibility>0.7?'#10b981':m.credibility>0.5?'#f59e0b':'#ef4444';
+    return `<tr style="${m.name===sourceName?'background:#f8fafc;font-weight:700':''}">
+      <td>${m.name}${m.name===sourceName?' ←':''}</td>
+      <td><span class="tag ${roleTag(m.role)}">${roleLabel(m.role)}</span></td>
+      <td>${credPct}分</td>
+      <td><div class="cred-bar" style="width:${credPct}%;background:${barColor}"></div></td>
+      <td>¥${m.avgMonthly}万/月</td>
+      <td>${m.city}</td>
+    </tr>`;
+  }).join('');
+  showModal('关联企业公信力详情 — 集团 #'+(groupId+1)+' (来源: '+sourceName+')',
+    `<p style="font-size:12px;color:var(--tx2);margin-bottom:10px">共 <b>${members.length}</b> 家关联企业</p>
+    <div style="max-height:350px;overflow-y:auto"><table><thead><tr><th>公司</th><th>角色</th><th>公信力</th><th>评级</th><th>月均采购</th><th>城市</th></tr></thead><tbody>${rows}</tbody></table></div>`
+  );
+}
+
+// ==================== KPI HEADER ====================
+function getKPIs(){
+  return [
+    {label:'月销售额',val:'¥2,847万',change:'+12.3%',up:true},
+    {label:'净利润率',val:'18.6%',change:'+2.1%',up:true},
+    {label:'回款准时率',val:'92.4%',change:'-1.5%',up:false},
+    {label:'活跃客户',val:'148家',change:'+8',up:true},
+    {label:'员工达标率',val:'87%',change:'+3%',up:true},
+    {label:'公信力均值',val:'0.78',change:'+0.03',up:true},
+  ];
+}
+function renderKPI(){
+  let h='';getKPIs().forEach(k=>{h+=`<div class="kpi-card ${k.up?'up':'down'}"><div class="kpi-val">${k.val}</div><div class="kpi-label">${k.label} <small>${k.change}</small></div></div>`;});
+  document.getElementById('kpiRow').innerHTML=h;
+}
+
+function getChart(domId){let el=document.getElementById(domId);if(!el)return null;return echarts.getInstanceByDom(el)||echarts.init(el);}
+window.addEventListener('resize',()=>{document.querySelectorAll('#main [id]').forEach(el=>{let c=echarts.getInstanceByDom(el);if(c)c.resize();});});
+
+// ==================== MAPS ====================
+function loadChinaMap(cb){if(isChinaMapLoaded){cb();return;}fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json').then(r=>r.json()).then(geo=>{echarts.registerMap('china',geo);isChinaMapLoaded=true;cb();}).catch(()=>{isChinaMapLoaded=true;cb();});}
+// ==================== PAGE RENDERERS ====================
+
+// ------ China Map ------
+function renderChina(ctn){
+  ctn.innerHTML='<div class="panel" style="min-height:733px;"><div class="panel-hd"><h3>中国市场销售分布</h3><div class="panel-ctls"><button onclick="closePanel(\'china\')">✕</button></div></div><div class="panel-body" style="overflow:hidden;position:relative;"><iframe src="./china_trade.html" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" frameborder="0"></iframe></div></div>';
+}
+
+// ------ World Map (multiple fallback sources) ------
+function renderWorld(ctn){
+  ctn.innerHTML='<div class="panel" style="min-height:733px;"><div class="panel-hd"><h3>全球市场销售分布</h3><div class="panel-ctls"><button onclick="closePanel(\'world\')">✕</button></div></div><div class="panel-body" style="overflow:hidden;position:relative;"><iframe src="./global_trade.html" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" frameborder="0"></iframe></div></div>';
+}
+
+// ------ Sales: LEFT bar, RIGHT waterfall ------
+function renderSales(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>销售额分析</h3><div class="panel-ctls"><button onclick="closePanel(\'sales\')">✕</button></div></div><div class="panel-body col2-layout"><div class="chart-wrap" id="salesBarChart"></div><div class="chart-wrap" id="waterfallChart"></div></div></div>';
+  setTimeout(()=>{
+    let c1=getChart('salesBarChart'),c2=getChart('waterfallChart');if(!c1||!c2)return;
+    let actual=MONTHS.map(()=>Math.round(1800+Math.random()*1400));
+    let target=MONTHS.map(()=>2500);
+    let profit=actual.map(a=>Math.round(a*(.08+Math.random()*.12)));
+    c1.setOption({
+      title:{text:'月销售额 vs 目标 vs 毛利润',left:'center',top:4,textStyle:{fontSize:13}},
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      legend:{bottom:0,textStyle:{fontSize:11}},
+      grid:{left:60,right:10,bottom:32,top:38,containLabel:true},
+      xAxis:{type:'category',data:MONTHS,axisLabel:{fontSize:10}},
+      yAxis:{type:'value',name:'万元'},
+      series:[
+        {name:'实际销售额',type:'bar',data:actual,barWidth:'32%',barCategoryGap:'55%',itemStyle:{color:'#3b82f6',borderRadius:[4,4,0,0]}},
+        {name:'毛利润',type:'bar',data:profit,barWidth:'22%',barGap:'15%',itemStyle:{color:'#86efac',borderRadius:[4,4,0,0]}},
+        {name:'目标线',type:'line',data:target,lineStyle:{color:'#ef4444',type:'dashed',width:2.5},symbol:'none'},
+      ]
+    });
+
+    // === WATERFALL: proper data structure ===
+    let items=['材料','人工','运输','推广','管理','税费','营销','净利'];
+    let wfChanges=[-680,-420,-180,-150,-210,-130,-95];
+    let total=actual[6]||2800;
+    // running[i] = total after applying wfChanges[0..i-1]
+    let running=[total];
+    wfChanges.forEach(v=>running.push(running[running.length-1]+v));
+    // running = [total, total-680, total-680-420, ..., total-all_changes]
+
+    let invisible=[0]; // 期初 starts from 0
+    let wfDisplay=[total]; // 期初 shows total
+    for(let i=0;i<wfChanges.length;i++){
+      if(wfChanges[i]>0){invisible.push(running[i]);}
+      else{invisible.push(running[i+1]);}
+      wfDisplay.push(Math.abs(wfChanges[i]));
+    }
+    invisible.push(0); // 净利 starts from 0
+    wfDisplay.push(running[running.length-1]); // 净利 = final total
+
+    c2.setOption({
+      title:{text:'费用瀑布图 (当月)',left:'center',top:4,textStyle:{fontSize:13}},
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{let v=ps.find(p=>p.seriesName==='金额').value;return ps[0].name+': ¥'+(ps[0].dataIndex===0?'':(ps[0].dataIndex<items.length+1?(wfChanges[ps[0].dataIndex-1]>0?'+':''):''))+v+'万';}},
+      grid:{left:65,right:15,bottom:38,top:38,containLabel:true},
+      xAxis:{type:'category',data:['期初','材\n料','人\n工','运\n输','推\n广','管\n理','税\n费','营\n销','净\n利'],axisLabel:{fontSize:10,rotate:0,lineHeight:12,margin:6},nameGap:8},
+      yAxis:{type:'value',name:'万元'},
+      series:[
+        {name:'占位',type:'bar',stack:'wf',barWidth:'32%',barCategoryGap:'50%',data:invisible,itemStyle:{color:'transparent'},emphasis:{itemStyle:{color:'transparent'}},tooltip:{show:false}},
+        {name:'金额',type:'bar',stack:'wf',data:wfDisplay.map((v,i)=>({value:v,itemStyle:{color:i===0?'#3b82f6':i===wfDisplay.length-1?'#10b981':(wfChanges[i-1]<0?'#94a3b8':'#4ade80'),borderRadius:[4,4,0,0]}})),label:{show:true,position:'top',formatter:p=>p.value+'万',fontSize:10}},
+      ]
+    });
+  },100);
+}
+
+// ------ Employee Lollipop ------
+function renderEmployee(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>员工业绩排名 (棒棒糖图) — 仅显示销售岗位</h3><div class="panel-ctls"><button onclick="closePanel(\'employee\')">✕</button></div></div><div class="panel-body"><div class="chart-wrap" id="lollipopChart"></div></div></div>';
+  setTimeout(()=>{
+    let c=getChart('lollipopChart');if(!c)return;
+    let emps=EMPLOYEES.filter(e=>e.sales>0).sort((a,b)=>a.sales-b.sales);
+    c.setOption({
+      tooltip:{trigger:'axis',formatter:ps=>{let e=emps[ps[0].dataIndex];return`<b>${e.name}</b> (${e.dept})<br/>业绩: ¥${e.sales}万 | 增长: ${e.growth>0?'+':''}${e.growth}%<br/>出勤: ${(e.attendance*100).toFixed(0)}% | 拜访: ${e.calls}次 | 签约: ${e.contracts}单`;},extraCssText:'max-width:260px;white-space:normal;'},
+      grid:{left:'18%',right:'14%',top:8,bottom:8,containLabel:true},
+      xAxis:{type:'value',name:'销售额(万)',axisLabel:{fontSize:10}},
+      yAxis:{type:'category',data:emps.map(e=>e.name+' ('+e.dept+')'),inverse:false,axisLabel:{fontSize:10}},
+      series:[
+        {name:'棒',type:'bar',data:emps.map(e=>({value:e.sales,itemStyle:{color:e.growth>=0?'#3b82f6':'#ef4444'}})),barWidth:6},
+        {name:'值',type:'scatter',data:emps.map(e=>e.sales),symbolSize:18,itemStyle:{color:ps=>emps[ps.dataIndex].growth>=0?'#2563eb':'#dc2626',borderColor:'#fff',borderWidth:3,shadowBlur:4,shadowColor:'rgba(0,0,0,.2)'},label:{show:true,position:'right',formatter:p=>'¥'+p.value+'万',fontSize:11},z:10},
+      ]
+    });
+  },100);
+}
+
+// ------ Purchase Histogram ------
+function renderPurchase(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>客户购买量分布 (直方图 + 累计占比)</h3><div class="panel-ctls"><button onclick="closePanel(\'purchase\')">✕</button></div></div><div class="panel-body"><div class="chart-wrap" id="purchaseHistChart"></div></div></div>';
+  setTimeout(()=>{
+    let c=getChart('purchaseHistChart');if(!c)return;
+    let vals=CUSTOMERS.map(c=>c.avgMonthly);
+    let bins=[0,30,60,90,120,160,200,250,300,500];
+    let labels=['0-30','30-60','60-90','90-120','120-160','160-200','200-250','250-300','300+'];
+    let counts=labels.map((_,i)=>vals.filter(v=>v>=bins[i]&&v<bins[i+1]).length);
+    let cum=[],s=0,t=counts.reduce((a,b)=>a+b,0);counts.forEach(c=>{s+=c;cum.push(Math.round(s/t*1000)/10);});
+    c.setOption({
+      tooltip:{trigger:'axis',formatter:ps=>`${ps[0].name}万: <b>${ps[0].value}家</b>客户<br/>累计占比: <b>${ps[1]?.value||0}%</b>`},
+      grid:{left:60,right:60,bottom:10,top:10,containLabel:true},
+      xAxis:{type:'category',data:labels,name:'月均购买量(万)',nameGap:32,axisLabel:{fontSize:10}},
+      yAxis:[{type:'value',name:'客户数',axisLabel:{fontSize:10}},{type:'value',name:'%',max:100,axisLabel:{fontSize:10}}],
+      series:[
+        {name:'客户数量',type:'bar',data:counts,itemStyle:{color:'#6366f1',borderRadius:[4,4,0,0]},barWidth:'50%',barCategoryGap:'40%'},
+        {name:'累计占比',type:'line',yAxisIndex:1,data:cum,smooth:true,lineStyle:{color:'#f59e0b',width:2.5},symbol:'circle',symbolSize:8,itemStyle:{color:'#f59e0b',borderColor:'#fff',borderWidth:2}},
+      ]
+    });
+  },100);
+}
+
+// ------ Pareto ------
+function renderPareto(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>帕累托分析 (80/20 法则)</h3><div class="panel-ctls"><button onclick="closePanel(\'pareto\')">✕</button></div></div><div class="panel-body col2-layout"><div class="chart-wrap" id="paretoCustChart"></div><div class="chart-wrap" id="paretoEmpChart"></div></div></div>';
+  setTimeout(()=>{
+    function mkPareto(entities,title,barColor){
+      let total=entities.reduce((a,b)=>a+b.v,0),cum=[],s=0;
+      entities.forEach(e=>{s+=e.v;cum.push(Math.round(s/total*1000)/10);});
+      return {
+        title:{text:title,left:'center',top:2,textStyle:{fontSize:12,fontWeight:600}},
+        tooltip:{trigger:'axis',formatter:ps=>`${ps[0].name}: <b>¥${ps[0].value}万</b><br/>累计占比: <b>${(ps[1]?.value||0)}%</b>`},
+        grid:{left:'22%',right:'8%',bottom:'16%',top:'14%',containLabel:true},
+        xAxis:{type:'category',data:entities.map(e=>e.name),axisLabel:{rotate:35,fontSize:9}},
+        yAxis:[{type:'value',name:'万',axisLabel:{fontSize:10}},{type:'value',name:'%',max:105,axisLabel:{fontSize:10}}],
+        series:[
+          {name:'金额',type:'bar',data:entities.map(e=>({value:e.v,itemStyle:{color:barColor,borderRadius:[3,3,0,0]}})),barWidth:'50%',barCategoryGap:'40%'},
+          {name:'累计占比',type:'line',yAxisIndex:1,data:cum,lineStyle:{color:'#ef4444',width:2.5},symbol:'circle',symbolSize:6,itemStyle:{color:'#ef4444',borderColor:'#fff',borderWidth:2},markLine:{silent:true,symbol:'none',data:[{yAxis:80,label:{formatter:'80%',fontSize:10},lineStyle:{color:'#dc2626',type:'dashed',width:1.5}}]}},
+        ]
+      };
+    }
+    let c1=getChart('paretoCustChart'),c2=getChart('paretoEmpChart');
+    let custEntities=CUSTOMERS.map(c=>({name:c.name,v:c.annual})).sort((a,b)=>b.v-a.v).slice(0,12);
+    let empEntities=EMPLOYEES.filter(e=>e.sales>0).map(e=>({name:e.name,v:e.sales})).sort((a,b)=>b.v-a.v);
+    if(c1)c1.setOption(mkPareto(custEntities,'客户贡献帕累托 (Top 12)','#f97316'));
+    if(c2)c2.setOption(mkPareto(empEntities,'员工业绩帕累托','#6366f1'));
+  },100);
+}
+
+// ------ Heatmap ------
+function renderHeatmap(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>优质客户检索 (多指标热力图)</h3><div class="panel-ctls"><button onclick="closePanel(\'heatmap\')">✕</button></div></div><div class="panel-body"><div class="chart-wrap" id="heatmapChart"></div></div></div>';
+  setTimeout(()=>{
+    let c=getChart('heatmapChart');if(!c)return;
+    let top22=CUSTOMERS.map(c=>({name:c.name,回款率:+(c.payRate*100).toFixed(0),履约率:+(c.fulfillRate*100).toFixed(0),稳定性:Math.round(65+Math.random()*35),退货率:+(c.returnRate*100).toFixed(1),关系价值:+c.networkValue.toFixed(2),月均采购:c.avgMonthly})).sort((a,b)=>b.回款率+b.履约率+b.稳定性-a.回款率-a.履约率-a.稳定性).slice(0,22);
+    let indicators=['回款率','履约率','稳定性','低退货','关系值','月均采购'];
+    let hdata=[];top22.forEach((c,i)=>{let vals=[c.回款率,c.履约率,c.稳定性,100-c.退货率,c.关系价值*100,Math.min(c.月均采购/3,100)];vals.forEach((v,j)=>{hdata.push([j,i,Math.round(v)]);});});
+    c.setOption({
+      tooltip:{formatter:p=>{let c=top22[p.value[1]];return`<b>${c.name}</b><br/>回款准时率: ${c.回款率}%<br/>履约率: ${c.履约率}%<br/>稳定性: ${c.稳定性}<br/>退货率: ${c.退货率}%<br/>关系价值: ${c.关系价值}<br/>月均采购: ¥${c.月均采购}万`;}},
+      grid:{left:'22%',right:'12%',bottom:'6%',top:'14%',containLabel:true},
+      xAxis:{type:'category',data:indicators,axisLabel:{fontSize:12},position:'top',nameGap:10},
+      yAxis:{type:'category',data:top22.map(c=>c.name),axisLabel:{fontSize:10},inverse:true},
+      visualMap:{min:0,max:100,calculable:true,orient:'vertical',right:4,bottom:'6%',top:'20%',inRange:{color:['#fee2e2','#fecaca','#fca5a5','#bbf7d0','#86efac','#4ade80','#22c55e','#16a34a']},text:['高','低'],textStyle:{fontSize:12}},
+      series:[{type:'heatmap',data:hdata,label:{show:true,fontSize:10},emphasis:{itemStyle:{shadowBlur:8,shadowColor:'rgba(0,0,0,.3)'}}}]
+    });
+  },100);
+}
+
+// ------ Employee Profile ------
+let searchName='';
+function renderEmpProfile(ctn){
+  let depts=['全部',...new Set(EMPLOYEES.map(e=>e.dept))];
+  let deptTabs=depts.map(d=>`<span class="dept-tab${d==='全部'?' sel':''}" onclick="filterDept('${d}')">${d}</span>`).join('');
+  ctn.innerHTML=`<div class="panel"><div class="panel-hd"><h3>员工档案</h3><input id="empSearch" type="text" placeholder="搜索姓名..." style="margin-left:12px;padding:4px 10px;border:1px solid var(--bd);border-radius:14px;font-size:12px;width:130px;outline:none;" oninput="onEmpSearch(this.value)"><div class="panel-ctls"><button onclick="closePanel('emp-profile')">✕</button></div></div><div class="dept-tabs" id="deptTabs">${deptTabs}</div><div class="panel-body col2-layout"><div class="emp-sidebar"><div class="emp-grid" id="empGrid"></div></div><div class="emp-main"><div class="chart-wrap" id="radarChart"></div></div></div></div>`;
+  searchName='';
+  renderEmpGrid();
+  setTimeout(()=>{let f=getFilteredEmps();if(f.length>0)selectEmployee(f[0].id-1);},200);
+}
+function getFilteredEmps(){return EMPLOYEES.filter(e=>(selectedDept==='全部'||e.dept===selectedDept)&&(!searchName||e.name.includes(searchName)));}
+function onEmpSearch(v){searchName=v;renderEmpGrid();let f=getFilteredEmps();if(f.length>0)selectEmployee(f[0].id-1);}
+function filterDept(dept){selectedDept=dept;document.querySelectorAll('.dept-tab').forEach(t=>t.classList.toggle('sel',t.textContent===dept));renderEmpGrid();let f=getFilteredEmps();if(f.length>0)selectEmployee(f[0].id-1);}
+function renderEmpGrid(){let grid=document.getElementById('empGrid');if(!grid)return;let filtered=getFilteredEmps();grid.innerHTML=filtered.map(e=>`<div class="emp-item" data-emp="${e.id-1}" onclick="selectEmployee(${e.id-1})"><div class="emp-avatar" style="background:${e.color}">${e.name[0]}</div><div class="emp-info"><div class="name">${e.name}</div><div class="dept">${e.dept}</div></div></div>`).join('');}
+function selectEmployee(idx){
+  document.querySelectorAll('.emp-item').forEach(el=>el.classList.remove('sel'));
+  let el=document.querySelector(`.emp-item[data-emp="${idx}"]`);if(el)el.classList.add('sel');
+  let e=EMPLOYEES[idx];if(!e)return;
+  let rc=getChart('radarChart');if(!rc)return;rc.clear();
+  let salesMax=Math.max(...EMPLOYEES.filter(em=>em.sales>0).map(em=>em.sales),1);
+  rc.setOption({
+    title:{text:e.name+' · 能力雷达图 ('+e.dept+')',left:'center',top:4,textStyle:{fontSize:14}},
+    radar:{center:['50%','55%'],radius:'65%',indicator:[{name:'出勤率',max:1},{name:'销售额',max:salesMax},{name:'客户拜访',max:240},{name:'签约数',max:35},{name:'客户评分',max:100},{name:'团队协作',max:100}],axisName:{fontSize:11}},
+    series:[{type:'radar',data:[{value:[e.attendance,e.sales,e.calls,e.contracts,e.customerScore,e.teamwork],name:e.name,areaStyle:{color:'rgba(99,102,241,.25)'},lineStyle:{color:'#6366f1',width:2},itemStyle:{color:'#6366f1'}}]}]
+  });
+}
+
+// ------ Credibility: click grouped bar → show related credibility ------
+function renderCredibility(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>客户公信力月度变化 <small style="font-weight:400;color:var(--tx2);font-size:11px">(点击母/子公司可查看关联企业公信力)</small></h3><div class="panel-ctls"><button onclick="closePanel(\'credibility\')">✕</button></div></div><div class="panel-body col2-layout"><div class="chart-wrap" id="credUpChart"></div><div class="chart-wrap" id="credDownChart"></div></div></div>';
+  setTimeout(()=>{
+    let c1=getChart('credUpChart'),c2=getChart('credDownChart');
+    let changes=CUSTOMERS.slice(0,20).map(c=>({name:c.name,change:(Math.random()-.45)*.22,role:c.role,groupId:c.groupId}));
+    let up=changes.filter(c=>c.change>0).sort((a,b)=>b.change-a.change).slice(0,8);
+    let down=changes.filter(c=>c.change<0).sort((a,b)=>a.change-b.change).slice(0,8);
+
+    function credOpt(title,data,color){
+      let items=data.map(d=>({name:d.name,val:Math.abs(d.change),change:d.change,role:d.role,groupId:d.groupId}));
+      return {
+        title:{text:title,left:'center',top:2,textStyle:{fontSize:13}},
+        tooltip:{trigger:'axis',formatter:ps=>{let m=ps[0].data._meta;let d=m||items[items.length-1-ps[0].dataIndex];if(!d)d=items[ps[0].dataIndex];return`<b>${d.name}</b> (${d.role})<br/>变化: <b style="color:${d.change>0?'#10b981':'#ef4444'}">${d.change>0?'+':''}${(d.change*100).toFixed(2)}%</b>${d.groupId>=0?'<br/>📎 关联企业 '+(CUSTOMERS.filter(c=>c.groupId===d.groupId).length)+' 家<br/><small>点击查看关联企业公信力</small>':''}`;}},
+        grid:{left:'22%',right:'14%',bottom:'6%',top:'14%',containLabel:true},
+        xAxis:{type:'value',name:'变化幅度',axisLabel:{formatter:v=>Math.abs(v*100).toFixed(0)+'%',fontSize:10}},
+        yAxis:{type:'category',data:items.map(d=>d.name+(d.groupId>=0?' 🔗':'')).reverse(),axisLabel:{fontSize:10}},
+        series:[{type:'bar',data:items.map(d=>({value:d.val,itemStyle:{color,barBorderRadius:[0,4,4,0]},_meta:{name:d.name,groupId:d.groupId,role:d.role,change:d.change}})).reverse(),barWidth:'55%',barCategoryGap:'35%',label:{show:true,position:'right',formatter:p=>{let m=p.data._meta;return m&&m.change!=null?(m.change>0?'+':'')+(Math.abs(m.change)*100).toFixed(2)+'%':'?';},fontSize:10}}]
+      };
+    }
+    if(c1){c1.setOption(credOpt('公信力 上升 客户',up,'#10b981'));c1.off('click');c1.on('click',function(p){let m=p.data?._meta;if(m&&m.groupId>=0){showGroupCredibility(m.groupId,m.name);}else if(p.name){let dd=up.find(d=>d.name===p.name||d.name+' 🔗'===p.name);if(dd&&dd.groupId>=0)showGroupCredibility(dd.groupId,dd.name);}});}
+    if(c2){c2.setOption(credOpt('公信力 下降 客户',down,'#ef4444'));c2.off('click');c2.on('click',function(p){let m=p.data?._meta;if(m&&m.groupId>=0)showGroupCredibility(m.groupId,m.name);else if(p.name){let dd=down.find(d=>d.name===p.name||d.name+' 🔗'===p.name);if(dd&&dd.groupId>=0)showGroupCredibility(dd.groupId,dd.name);}});}
+  },100);
+}
+
+// ------ Network: click node → show related credibility ------
+function renderNetwork(ctn){
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>客户关系网络 (节点大小=购买量, 红线=同法人, 橙线=兄弟/合作, 绿虚线=业务)</h3><div class="panel-ctls"><button onclick="closePanel(\'network\')">✕</button></div></div><div class="panel-body"><div class="chart-wrap" id="networkChart"></div></div></div>';
+  setTimeout(()=>{
+    let c=getChart('networkChart');if(!c)return;
+    let topN=CUSTOMERS.slice(0,28);
+    let nodes=topN.map(c=>{let sz=10+Math.sqrt(c.avgMonthly)*1.3;return{id:c.name,name:c.name,symbolSize:sz,itemStyle:{color:'#3b82f6',borderColor:'#93c5fd',borderWidth:2},credibility:c.credibility,avgMonthly:c.avgMonthly,role:c.role,gid:c.groupId};});
+    let links=[];
+    for(let i=0;i<topN.length;i++){
+      for(let j=i+1;j<topN.length;j++){let ci=topN[i],cj=topN[j];if(ci.groupId>=0&&ci.groupId===cj.groupId){let isFamily=ci.role==='母公司'||cj.role==='母公司'||ci.role==='子公司'||cj.role==='子公司';links.push({source:ci.name,target:cj.name,lineStyle:{color:isFamily?'#ef4444':'#f59e0b',width:isFamily?3:2},label:{show:true,formatter:isFamily?'同法人':'合作',fontSize:9,color:isFamily?'#dc2626':'#d97706'}});}}
+      if(i<topN.length-2&&Math.random()<.08){links.push({source:topN[i].name,target:topN[i+1+Math.floor(Math.random()*3)].name,lineStyle:{color:'#10b981',width:1,type:'dashed'}});}
+    }
+    if(links.length===0){for(let i=0;i<topN.length-1;i+=3){links.push({source:topN[i].name,target:topN[i+1]?.name||topN[0].name,lineStyle:{color:'#ef4444',width:3},label:{show:true,formatter:'同法人',fontSize:9,color:'#dc2626'}});links.push({source:topN[i+1]?.name||topN[0].name,target:topN[i+2]?.name||topN[0].name,lineStyle:{color:'#f59e0b',width:2}});}}
+    c.setOption({
+      tooltip:{formatter:p=>{let cnt=p.data.gid>=0?CUSTOMERS.filter(c=>c.groupId===p.data.gid).length:0;return`<b>${p.name}</b> (${p.data.role||'独立'})<br/>公信力: ${(p.data.credibility*100).toFixed(0)}分<br/>月均采购: ¥${p.data.avgMonthly}万<br/>${p.data.gid>=0?'关联企业 '+cnt+' 家<br/><small>点击查看集团详情</small>':'无集团关联'}`;},extraCssText:'max-width:240px'},
+      legend:{data:['红线:同法人','橙线:兄弟/合作','绿虚线:业务合作'],bottom:0,textStyle:{fontSize:10}},
+      series:[{type:'graph',layout:'force',roam:true,draggable:true,force:{repulsion:350,edgeLength:[100,280],gravity:.05,friction:.15},data:nodes,links,emphasis:{focus:'adjacency',lineStyle:{width:5}},lineStyle:{color:'source',curveness:.2},label:{show:true,position:'right',fontSize:10,formatter:p=>{let d=CUSTOMERS.find(dd=>dd.name===p.name);return(d&&d.groupId>=0?'🔗 ':'')+p.name;},color:'#64748b'}}]
+    });
+    c.off('click');c.on('click',function(p){if(p.data&&p.data.gid>=0){showGroupCredibility(p.data.gid,p.name);}});
+  },100);
+}
+
+// ==================== NAVIGATION ====================
+const renderers={'china':renderChina,'world':renderWorld,'sales':renderSales,'employee':renderEmployee,'purchase':renderPurchase,'pareto':renderPareto,'heatmap':renderHeatmap,'emp-profile':renderEmpProfile,'credibility':renderCredibility,'network':renderNetwork};
+
+function openPanel(pageId){if(!multiMode){activePanels.clear();}activePanels.add(pageId);updateSidebar();refreshMain();}
+function closePanel(pageId){activePanels.delete(pageId);updateSidebar();if(activePanels.size===0){activePanels.add('china');updateSidebar();}refreshMain();}
+function updateSidebar(){document.querySelectorAll('.side-btn').forEach(b=>b.classList.toggle('active',activePanels.has(b.dataset.page)));}
+function refreshMain(){
+  let main=document.getElementById('main');
+  main.querySelectorAll('.chart-wrap').forEach(el=>{let c=echarts.getInstanceByDom(el);if(c)c.dispose();});
+  main.innerHTML='';
+  let sz=activePanels.size;
+  if(sz===1&&!multiMode){main.className='single';}else{main.className='multi';if(sz===2)main.classList.add('n2');}
+  [...activePanels].forEach(pageId=>{let wrapper=document.createElement('div');main.appendChild(wrapper);renderers[pageId](wrapper);});
+}
+
+// ==================== INIT ====================
+document.getElementById('multiMode').addEventListener('change',function(){multiMode=this.checked;if(!multiMode&&activePanels.size>1){activePanels.clear();activePanels.add('china');updateSidebar();}refreshMain();});
+document.querySelectorAll('.side-btn').forEach(btn=>{btn.addEventListener('click',function(){let pageId=this.dataset.page;if(!multiMode){if(activePanels.has(pageId)&&activePanels.size===1)return;}else{if(activePanels.has(pageId)){closePanel(pageId);return;}}openPanel(pageId);});});
+document.getElementById('selYear').addEventListener('change',renderKPI);
+document.getElementById('selMonth').addEventListener('change',renderKPI);
+
+// Quarter buttons
+document.querySelectorAll('.q-btn').forEach(btn=>{btn.addEventListener('click',function(){document.querySelectorAll('.q-btn').forEach(b=>b.classList.remove('sel'));this.classList.add('sel');currentQuarter=this.dataset.q;renderKPI();toast(this.dataset.q==='0'?'已切换至 全年 视图':'已切换至 '+this.textContent+' 视图');});});
+
+loadChinaMap(()=>{});
+renderKPI();
+refreshMain();
+</script>
+</body>
+</html>
