@@ -310,7 +310,7 @@ function renderSales(ctn){
       title:{text:'费用瀑布图 (当月)',left:'center',top:4,textStyle:{fontSize:13}},
       tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{let v=ps.find(p=>p.seriesName==='金额').value;return ps[0].name+': ¥'+(ps[0].dataIndex===0?'':(ps[0].dataIndex<items.length+1?(wfChanges[ps[0].dataIndex-1]>0?'+':''):''))+v+'万';}},
       grid:{left:65,right:15,bottom:38,top:38,containLabel:true},
-      xAxis:{type:'category',data:['期\n初','材\n料','人\n工','运\n输','推\n广','管\n理','税\n费','营\n销','净\n利'],axisLabel:{fontSize:10,rotate:0,lineHeight:12,margin:6},nameGap:8},
+      xAxis:{type:'category',data:['期初','材\n料','人\n工','运\n输','推\n广','管\n理','税\n费','营\n销','净\n利'],axisLabel:{fontSize:10,rotate:0,lineHeight:12,margin:6},nameGap:8},
       yAxis:{type:'value',name:'万元'},
       series:[
         {name:'占位',type:'bar',stack:'wf',barWidth:'32%',barCategoryGap:'50%',data:invisible,itemStyle:{color:'transparent'},emphasis:{itemStyle:{color:'transparent'}},tooltip:{show:false}},
@@ -322,20 +322,28 @@ function renderSales(ctn){
 
 // ------ Employee Lollipop ------
 function renderEmployee(ctn){
-  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>员工业绩排名 (棒棒糖图) — 仅显示销售岗位</h3><div class="panel-ctls"><button onclick="closePanel(\'employee\')">✕</button></div></div><div class="panel-body"><div class="chart-wrap" id="lollipopChart"></div></div></div>';
+  ctn.innerHTML='<div class="panel"><div class="panel-hd"><h3>员工业绩排名 — 销售岗位</h3><div class="panel-ctls"><button onclick="closePanel(\'employee\')">✕</button></div></div><div class="panel-body col2-layout"><div class="chart-wrap" id="lollipopTopChart"></div><div class="chart-wrap" id="lollipopBotChart"></div></div></div>';
   setTimeout(()=>{
-    let c=getChart('lollipopChart');if(!c)return;
-    let emps=EMPLOYEES.filter(e=>e.sales>0).sort((a,b)=>a.sales-b.sales);
-    c.setOption({
-      tooltip:{trigger:'axis',formatter:ps=>{let e=emps[ps[0].dataIndex];return`<b>${e.name}</b> (${e.dept})<br/>业绩: ¥${e.sales}万 | 增长: ${e.growth>0?'+':''}${e.growth}%<br/>出勤: ${(e.attendance*100).toFixed(0)}% | 拜访: ${e.calls}次 | 签约: ${e.contracts}单`;},extraCssText:'max-width:260px;white-space:normal;'},
-      grid:{left:'18%',right:'14%',top:8,bottom:8,containLabel:true},
-      xAxis:{type:'value',name:'销售额(万)',axisLabel:{fontSize:10}},
-      yAxis:{type:'category',data:emps.map(e=>e.name+' ('+e.dept+')'),inverse:false,axisLabel:{fontSize:10}},
-      series:[
-        {name:'棒',type:'bar',data:emps.map(e=>({value:e.sales,itemStyle:{color:e.growth>=0?'#3b82f6':'#ef4444'}})),barWidth:6},
-        {name:'值',type:'scatter',data:emps.map(e=>e.sales),symbolSize:18,itemStyle:{color:ps=>emps[ps.dataIndex].growth>=0?'#2563eb':'#dc2626',borderColor:'#fff',borderWidth:3,shadowBlur:4,shadowColor:'rgba(0,0,0,.2)'},label:{show:true,position:'right',formatter:p=>'¥'+p.value+'万',fontSize:11},z:10},
-      ]
-    });
+    let c1=getChart('lollipopTopChart'),c2=getChart('lollipopBotChart');if(!c1||!c2)return;
+    let emps=EMPLOYEES.filter(e=>e.sales>0).sort((a,b)=>b.sales-a.sales);
+    let top10=emps.slice(0,10).reverse();
+    let bot10=emps.slice(-10);
+
+    function lollipopOpt(title,data){
+      return {
+        title:{text:title,left:'center',top:2,textStyle:{fontSize:12}},
+        tooltip:{trigger:'axis',formatter:ps=>{let e=data[ps[0].dataIndex];return`<b>${e.name}</b> (${e.dept})<br/>业绩: ¥${e.sales}万 | 增长: ${e.growth>0?'+':''}${e.growth}%<br/>出勤: ${(e.attendance*100).toFixed(0)}% | 拜访: ${e.calls}次 | 签约: ${e.contracts}单`;},extraCssText:'max-width:240px;white-space:normal;'},
+        grid:{left:'22%',right:'14%',top:'10%',bottom:'6%',containLabel:true},
+        xAxis:{type:'value',name:'销售额(万)',axisLabel:{fontSize:9}},
+        yAxis:{type:'category',data:data.map(e=>e.name),axisLabel:{fontSize:9}},
+        series:[
+          {name:'棒',type:'bar',data:data.map(e=>({value:e.sales,itemStyle:{color:e.growth>=0?'#3b82f6':'#ef4444'}})),barWidth:5},
+          {name:'值',type:'scatter',data:data.map(e=>e.sales),symbolSize:14,itemStyle:{color:ps=>data[ps.dataIndex].growth>=0?'#2563eb':'#dc2626',borderColor:'#fff',borderWidth:2,shadowBlur:3,shadowColor:'rgba(0,0,0,.15)'},label:{show:true,position:'right',formatter:p=>'¥'+p.value+'万',fontSize:9},z:10},
+        ]
+      };
+    }
+    if(c1)c1.setOption(lollipopOpt('🏆 业绩 TOP 10',top10));
+    if(c2)c2.setOption(lollipopOpt('⚠️ 业绩倒数 10 名',bot10));
   },100);
 }
 
