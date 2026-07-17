@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>澳维液体膜 · 全球贸易数据监控</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+:root {
+  --bg-deep: #061126;
+  --glass: rgba(6, 20, 50, 0.65);
+  --cyan: #00E5FF;
+  --blue: #2979FF;
+  --purple: #7C4DFF;
+  --border-glow: rgba(0, 229, 255, 0.25);
+  --text: #c8d6e5;
+  --text-dim: #5a6f8a;
+  --danger: #ff5252;
+  --success: #00e676;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  width: 100vw; height: 100vh; overflow: hidden;
+  background: var(--bg-deep);
+  font-family: 'Orbitron', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  color: var(--text);
+  position: relative;
+}
+
+body::before {
+  content: ''; position: fixed; top:0; left:0; width:100%; height:100%;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: ''; position: fixed; top:0; left:0; width:100%; height:100%;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px);
+  pointer-events: none; z-index: 999; opacity: 0.3;
+}
+
+#app {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%;
+  display: flex; gap: 12px; padding: 8px 12px;
+}
+
+/* LEFT COLUMN */
+#left-col {
+  width: 480px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+#panel-export  { flex: 144; }
+#panel-continent { flex: 144; }
+#panel-ranking  { flex: 8; min-height: 240px; }
+
+/* RIGHT COLUMN */
+#right-col {
+  flex: 1;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* KPI ROW */
+#kpi-row {
+  display: flex; gap: 8px; padding: 0; flex-shrink: 0;
+}
+.kpi-card {
+  flex: 1; background: var(--glass);
+  border: 1px solid var(--border-glow); border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; padding: 14px 0;
+  backdrop-filter: blur(8px);
+}
+.kpi-card::after {
+  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+.kpi-val { font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 0 10px rgba(0,229,255,0.5); letter-spacing: 1px; }
+.kpi-label { font-size: 9px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
+.kpi-change { font-size: 8px; margin-top: 1px; }
+.kpi-change.up { color: var(--success); }
+.kpi-change.down { color: var(--danger); }
+
+/* PANELS */
+.panel {
+  background: var(--glass);
+  border: 1px solid var(--border-glow);
+  border-radius: 8px;
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex; flex-direction: column;
+}
+.panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0.6;
+}
+.panel::after {
+  content: ''; position: absolute; bottom: 0; right: 0;
+  width: 20px; height: 20px;
+  border-right: 2px solid var(--border-glow);
+  border-bottom: 2px solid var(--border-glow);
+  opacity: 0.5;
+}
+.panel-hd {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px 5px;
+  font-size: 12px; font-weight: 600; color: var(--cyan);
+  letter-spacing: 1.5px; flex-shrink: 0;
+}
+.panel-hd .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--cyan);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.panel-body { flex: 1; position: relative; overflow: hidden; }
+
+/* RANKING */
+.rank-list { padding: 6px 12px 12px; }
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px; margin-bottom: 3px; border-radius: 4px;
+  background: rgba(0,229,255,0.03); transition: 0.2s;
+}
+.rank-item:hover { background: rgba(0,229,255,0.08); }
+.rank-badge {
+  width: 26px; height: 26px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 900; color: #fff;
+}
+.rank-badge.gold { background: linear-gradient(135deg, #ffd700, #ff8c00); }
+.rank-badge.silver { background: linear-gradient(135deg, #c0c0c0, #8a8a8a); }
+.rank-badge.bronze { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+.rank-badge.normal { background: rgba(0,229,255,0.2); color: var(--cyan); }
+.rank-name { flex: 1; font-size: 12px; color: #e8edf5; }
+.rank-pct { font-size: 12px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 6px rgba(0,229,255,0.3); }
+.rank-bar-wrap { width: 90px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.rank-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ==================== LEFT COLUMN ==================== -->
+  <div id="left-col">
+
+    <div class="panel" id="panel-export">
+      <div class="panel-hd"><span class="dot"></span>全球出口总量趋势 (2018-2026)</div>
+      <div class="panel-body"><div id="chart-export" style="width:100%;height:100%;"></div></div>
+    </div>
+
+    <div class="panel" id="panel-continent">
+      <div class="panel-hd"><span class="dot"></span>各洲月度销售额 (2026)</div>
+      <div class="panel-body"><div id="chart-continent" style="width:100%;height:100%;"></div></div>
+    </div>
+
+    <div class="panel" id="panel-ranking">
+      <div class="panel-hd"><span class="dot"></span>销售额国家排行 TOP 5</div>
+      <div class="panel-body"><div class="rank-list" id="rank-list"></div></div>
+    </div>
+  </div>
+
+  <!-- ==================== RIGHT COLUMN ==================== -->
+  <div id="right-col">
+
+    <div id="kpi-row">
+      <div class="kpi-card"><div class="kpi-val">¥3,125万</div><div class="kpi-label">月销售额</div><div class="kpi-change up">▲ 15.8%</div></div>
+      <div class="kpi-card"><div class="kpi-val">21.4%</div><div class="kpi-label">净利润率</div><div class="kpi-change up">▲ 3.2%</div></div>
+      <div class="kpi-card"><div class="kpi-val">94.7%</div><div class="kpi-label">回款准时率</div><div class="kpi-change up">▲ 0.9%</div></div>
+      <div class="kpi-card"><div class="kpi-val">163</div><div class="kpi-label">活跃客户</div><div class="kpi-change up">▲ 12家</div></div>
+      <div class="kpi-card"><div class="kpi-val">0.82</div><div class="kpi-label">公信力均值</div><div class="kpi-change up">▲ 0.05</div></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+var years = ['2018','2019','2020','2021','2022','2023','2024','2025','2026'];
+var exportData = [420, 465, 398, 532, 615, 688, 742, 810, 867];
+var exportTarget = [400, 440, 420, 500, 580, 650, 720, 780, 850];
+
+var months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+var continents = [
+  { name: '亚洲',   data: months.map(function(){ return Math.round(280+Math.random()*160); }), color: '#00E5FF' },
+  { name: '欧洲',   data: months.map(function(){ return Math.round(180+Math.random()*130); }), color: '#2979FF' },
+  { name: '北美',   data: months.map(function(){ return Math.round(150+Math.random()*110); }), color: '#7C4DFF' },
+  { name: '南美',   data: months.map(function(){ return Math.round(70 +Math.random()*60);  }), color: '#FF6D00' },
+  { name: '非洲',   data: months.map(function(){ return Math.round(40 +Math.random()*50);  }), color: '#00E676' },
+  { name: '大洋洲', data: months.map(function(){ return Math.round(25 +Math.random()*35);  }), color: '#FF4081' },
+];
+
+var topCountries = [
+  { name: '中国', pct: 28.5, value: 811 },
+  { name: '美国', pct: 19.2, value: 546 },
+  { name: '德国', pct: 12.8, value: 364 },
+  { name: '日本', pct: 9.6,  value: 273 },
+  { name: '韩国', pct: 7.3,  value: 208 },
+];
+
+// Module 1
+(function(){
+  var c = echarts.init(document.getElementById('chart-export'));
+  c.setOption({
+    tooltip: { trigger:'axis', backgroundColor:'rgba(6,20,50,0.9)', borderColor:'#00E5FF', textStyle:{color:'#c8d6e5',fontSize:11} },
+    legend: { right:6, top:2, textStyle:{color:'#5a6f8a',fontSize:10}, data:['出口额','目标线'] },
+    grid: { left:52, right:14, top:40, bottom:40 },
+    xAxis: { type:'category', data:years, axisLine:{lineStyle:{color:'rgba(0,229,255,0.2)'}}, axisLabel:{color:'#5a6f8a',fontSize:11}, axisTick:{show:false} },
+    yAxis: { type:'value', name:'亿元', nameTextStyle:{color:'#5a6f8a',fontSize:11}, splitLine:{lineStyle:{color:'rgba(0,229,255,0.06)'}}, axisLabel:{color:'#5a6f8a',fontSize:11, margin:12} },
+    series: [
+      { name:'出口额', type:'line', data:exportData, smooth:true, symbol:'circle', symbolSize:7,
+        lineStyle:{width:3, shadowBlur:10, shadowColor:'rgba(0,229,255,0.5)'},
+        itemStyle:{color:'#00E5FF', borderColor:'#fff', borderWidth:2},
+        areaStyle:{color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,255,0.3)'},{offset:1,color:'rgba(0,229,255,0.0)'}])}
+      },
+      { name:'目标线', type:'line', data:exportTarget, lineStyle:{color:'rgba(124,77,255,0.6)',type:'dashed',width:1.5}, symbol:'none' }
+    ]
+  });
+})();
+
+// Module 2
+(function(){
+  var c = echarts.init(document.getElementById('chart-continent'));
+  var series = continents.map(function(con) { return { name:con.name, type:'bar', stack:'total', data:con.data, itemStyle:{color:con.color}, barWidth:'55%' }; });
+  c.setOption({
+    tooltip: { trigger:'axis', backgroundColor:'rgba(6,20,50,0.9)', borderColor:'#00E5FF', textStyle:{color:'#c8d6e5',fontSize:11} },
+    legend: { bottom:2, textStyle:{color:'#5a6f8a',fontSize:9}, itemWidth:10, itemHeight:8 },
+    grid: { left:42, right:10, top:18, bottom:48 },
+    xAxis: { type:'category', data:months, axisLine:{lineStyle:{color:'rgba(0,229,255,0.2)'}}, axisLabel:{color:'#5a6f8a',fontSize:10} },
+    yAxis: { type:'value', name:'万元', nameTextStyle:{color:'#5a6f8a',fontSize:11}, splitLine:{lineStyle:{color:'rgba(0,229,255,0.06)'}}, axisLabel:{color:'#5a6f8a',fontSize:11, margin:12} },
+    series: series
+  });
+})();
+
+// Module 3
+(function(){
+  var html = '';
+  topCountries.forEach(function(c, i) {
+    var cls = i===0?'gold':i===1?'silver':i===2?'bronze':'normal';
+    html += '<div class="rank-item">'+
+      '<div class="rank-badge '+cls+'">NO.'+(i+1)+'</div>'+
+      '<span class="rank-name">'+c.name+'</span>'+
+      '<div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:'+(c.pct*2.5)+'%"></div></div>'+
+      '<span class="rank-pct">'+c.pct+'%</span></div>';
+  });
+  document.getElementById('rank-list').innerHTML = html;
+})();
+</script>
+</body>
+</html>
