@@ -310,7 +310,7 @@ function renderSales(ctn){
       title:{text:'费用瀑布图 (当月)',left:'center',top:4,textStyle:{fontSize:13}},
       tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{let v=ps.find(p=>p.seriesName==='金额').value;return ps[0].name+': ¥'+(ps[0].dataIndex===0?'':(ps[0].dataIndex<items.length+1?(wfChanges[ps[0].dataIndex-1]>0?'+':''):''))+v+'万';}},
       grid:{left:65,right:15,bottom:38,top:38,containLabel:true},
-      xAxis:{type:'category',data:['期初','材\n料','人\n工','运\n输','推\n广','管\n理','税\n费','营\n销','净\n利'],axisLabel:{fontSize:10,rotate:0,lineHeight:12,margin:6},nameGap:8},
+      xAxis:{type:'category',data:['期\n初','材\n料','人\n工','运\n输','推\n广','管\n理','税\n费','营\n销','净\n利'],axisLabel:{fontSize:10,rotate:0,lineHeight:12,margin:6},nameGap:8},
       yAxis:{type:'value',name:'万元'},
       series:[
         {name:'占位',type:'bar',stack:'wf',barWidth:'32%',barCategoryGap:'50%',data:invisible,itemStyle:{color:'transparent'},emphasis:{itemStyle:{color:'transparent'}},tooltip:{show:false}},
